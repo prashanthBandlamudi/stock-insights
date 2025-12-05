@@ -1,7 +1,5 @@
-import { MemberProvider } from '@/integrations';
 import { createBrowserRouter, RouterProvider, Navigate, Outlet } from 'react-router-dom';
 import { ScrollToTop } from '@/lib/scroll-to-top';
-import ErrorPage from '@/integrations/errorHandlers/ErrorPage';
 import HomePage from '@/components/pages/HomePage';
 import FundamentalsPage from '@/components/pages/FundamentalsPage';
 import PortfolioPage from '@/components/pages/PortfolioPage';
@@ -13,6 +11,19 @@ function Layout() {
       <ScrollToTop />
       <Outlet />
     </>
+  );
+}
+
+// Simple error page component
+function ErrorPage() {
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-background">
+      <div className="text-center">
+        <h1 className="text-4xl font-bold text-foreground mb-4">Page Not Found</h1>
+        <p className="text-foreground/70 mb-6">The page you're looking for doesn't exist.</p>
+        <a href="/" className="text-primary hover:underline">Go back home</a>
+      </div>
+    </div>
   );
 }
 
@@ -45,9 +56,5 @@ const router = createBrowserRouter([
 });
 
 export default function AppRouter() {
-  return (
-    <MemberProvider>
-      <RouterProvider router={router} />
-    </MemberProvider>
-  );
+  return <RouterProvider router={router} />;
 }

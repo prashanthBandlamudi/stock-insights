@@ -1,21 +1,15 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Wallet, TrendingUp, TrendingDown, PieChart, BarChart3, Activity, Lock, Zap } from 'lucide-react';
+import { Wallet, TrendingUp, TrendingDown, PieChart as PieChartIcon, BarChart3, Activity } from 'lucide-react';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { BaseCrudService } from '@/integrations';
-import { FundamentalScreeningResults } from '@/entities';
-import { useSubscriptionStore } from '@/store/subscriptionStore';
-import SubscriptionModal from '@/components/SubscriptionModal';
-import { PieChart as RechartsPie, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Legend, LineChart, Line, CartesianGrid } from 'recharts';
+import { StockService, Stock } from '@/services/stockService';
+import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Legend, LineChart, Line, CartesianGrid } from 'recharts';
 
 export default function PortfolioPage() {
-  const { isSubscribed } = useSubscriptionStore();
-  const [isSubscriptionModalOpen, setIsSubscriptionModalOpen] = useState(false);
-  const [stocks, setStocks] = useState<FundamentalScreeningResults[]>([]);
+  const [stocks, setStocks] = useState<Stock[]>([]);
   const [totalValue, setTotalValue] = useState(0);
   const [totalGain, setTotalGain] = useState(0);
   const [sectorData, setSectorData] = useState<{ name: string; value: number }[]>([]);
@@ -25,10 +19,8 @@ export default function PortfolioPage() {
   }, []);
 
   const loadPortfolioData = async () => {
-    const { items } = await BaseCrudService.getAll<FundamentalScreeningResults>('fundamentalscreeningresults');
-    // If not subscribed, limit to 5 stocks
-    const displayStocks = isSubscribed ? items : items.slice(0, 5);
-    setStocks(displayStocks);
+    const items = await StockService.getAll();
+    setStocks(items);
 
     const total = items.reduce((sum, stock) => sum + (stock.currentPrice || 0) * 100, 0);
     setTotalValue(total);
@@ -59,7 +51,7 @@ export default function PortfolioPage() {
   ];
 
   const topPerformers = stocks
-    .filter(s => s.roe !== undefined)
+    .filter((s) => s.roe !== undefined)
     .sort((a, b) => (b.roe || 0) - (a.roe || 0))
     .slice(0, 5);
 
@@ -87,30 +79,6 @@ export default function PortfolioPage() {
             </p>
           </motion.div>
 
-          {/* Subscription Notice */}
-          {!isSubscribed && (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="mb-8 p-4 rounded-lg bg-secondary/10 border border-secondary/30 flex items-center justify-between"
-            >
-              <div className="flex items-center gap-3">
-                <Lock className="h-5 w-5 text-secondary" />
-                <div>
-                  <p className="font-paragraph text-foreground font-semibold">Limited Portfolio View</p>
-                  <p className="text-sm font-paragraph text-foreground/70">Upgrade to unlock full portfolio tracking and advanced analytics</p>
-                </div>
-              </div>
-              <Button
-                onClick={() => setIsSubscriptionModalOpen(true)}
-                className="bg-secondary text-secondary-foreground hover:bg-secondary/90 font-paragraph"
-              >
-                <Zap className="mr-2 h-4 w-4" />
-                Upgrade
-              </Button>
-            </motion.div>
-          )}
-
           {/* Portfolio Stats */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -125,7 +93,9 @@ export default function PortfolioPage() {
                 </div>
                 <Badge className="bg-primary/20 text-primary border-primary/30">Live</Badge>
               </div>
-              <div className="text-sm font-paragraph text-foreground/60 mb-2">Total Portfolio Value</div>
+              <div className="text-sm font-paragraph text-foreground/60 mb-2">
+                Total Portfolio Value
+              </div>
               <div className="text-4xl font-heading font-bold text-primary mb-2">
                 {formatCurrency(totalValue)}
               </div>
@@ -166,7 +136,7 @@ export default function PortfolioPage() {
                 {stocks.length}
               </div>
               <div className="flex items-center gap-2 text-sm font-paragraph text-data-highlight">
-                <PieChart className="h-4 w-4" />
+                <PieChartIcon className="h-4 w-4" />
                 <span>{sectorData.length} sectors</span>
               </div>
             </Card>
@@ -182,12 +152,12 @@ export default function PortfolioPage() {
             >
               <Card className="p-8 bg-white/5 border-white/10 backdrop-blur-lg h-full">
                 <h2 className="text-2xl font-heading font-bold text-foreground mb-6 flex items-center gap-3">
-                  <PieChart className="h-6 w-6 text-primary" />
+                  <PieChartIcon className="h-6 w-6 text-primary" />
                   Sector Allocation
                 </h2>
                 {sectorData.length > 0 ? (
                   <ResponsiveContainer width="100%" height={300}>
-                    <RechartsPie>
+                    <PieChart>
                       <Pie
                         data={sectorData}
                         cx="50%"
@@ -202,30 +172,22 @@ export default function PortfolioPage() {
                           <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                         ))}
                       </Pie>
-                      <Tooltip
-                        contentStyle={{
-                          backgroundColor: '#1a1a1a',
-                          border: '1px solid rgba(255,255,255,0.1)',
-                          borderRadius: '8px',
-                          fontFamily: 'azeret-mono',
-                        }}
-                        formatter={(value: number) => formatCurrency(value)}
-                      />
-                    </RechartsPie>
+                      <Tooltip formatter={(value: number) => formatCurrency(value)} />
+                    </PieChart>
                   </ResponsiveContainer>
                 ) : (
-                  <div className="h-[300px] flex items-center justify-center text-foreground/60 font-paragraph">
-                    No sector data available
+                  <div className="h-[300px] flex items-center justify-center text-foreground/50">
+                    No data available
                   </div>
                 )}
               </Card>
             </motion.div>
 
-            {/* Performance Trend */}
+            {/* Performance Chart */}
             <motion.div
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.3 }}
+              transition={{ delay: 0.2 }}
             >
               <Card className="p-8 bg-white/5 border-white/10 backdrop-blur-lg h-full">
                 <h2 className="text-2xl font-heading font-bold text-foreground mb-6 flex items-center gap-3">
@@ -234,33 +196,16 @@ export default function PortfolioPage() {
                 </h2>
                 <ResponsiveContainer width="100%" height={300}>
                   <LineChart data={performanceData}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />
-                    <XAxis
-                      dataKey="month"
-                      stroke="#ffffff80"
-                      style={{ fontFamily: 'azeret-mono', fontSize: '12px' }}
-                    />
-                    <YAxis
-                      stroke="#ffffff80"
-                      style={{ fontFamily: 'azeret-mono', fontSize: '12px' }}
-                      tickFormatter={(value) => `₹${(value / 1000).toFixed(0)}K`}
-                    />
-                    <Tooltip
-                      contentStyle={{
-                        backgroundColor: '#1a1a1a',
-                        border: '1px solid rgba(255,255,255,0.1)',
-                        borderRadius: '8px',
-                        fontFamily: 'azeret-mono',
-                      }}
-                      formatter={(value: number) => formatCurrency(value)}
-                    />
+                    <CartesianGrid strokeDasharray="3 3" stroke="#333" />
+                    <XAxis dataKey="month" stroke="#888" />
+                    <YAxis stroke="#888" />
+                    <Tooltip formatter={(value: number) => formatCurrency(value)} />
                     <Line
                       type="monotone"
                       dataKey="value"
                       stroke="#BB86FC"
                       strokeWidth={3}
                       dot={{ fill: '#BB86FC', r: 5 }}
-                      activeDot={{ r: 7 }}
                     />
                   </LineChart>
                 </ResponsiveContainer>
@@ -272,107 +217,48 @@ export default function PortfolioPage() {
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.4 }}
+            transition={{ delay: 0.3 }}
           >
             <Card className="p-8 bg-white/5 border-white/10 backdrop-blur-lg">
               <h2 className="text-2xl font-heading font-bold text-foreground mb-6 flex items-center gap-3">
                 <TrendingUp className="h-6 w-6 text-primary" />
                 Top Performers by ROE
               </h2>
-
-              {topPerformers.length > 0 ? (
-                <ResponsiveContainer width="100%" height={300}>
-                  <BarChart data={topPerformers}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />
-                    <XAxis
-                      dataKey="stockName"
-                      stroke="#ffffff80"
-                      style={{ fontFamily: 'azeret-mono', fontSize: '12px' }}
-                    />
-                    <YAxis
-                      stroke="#ffffff80"
-                      style={{ fontFamily: 'azeret-mono', fontSize: '12px' }}
-                      label={{ value: 'ROE %', angle: -90, position: 'insideLeft', fill: '#ffffff80' }}
-                    />
-                    <Tooltip
-                      contentStyle={{
-                        backgroundColor: '#1a1a1a',
-                        border: '1px solid rgba(255,255,255,0.1)',
-                        borderRadius: '8px',
-                        fontFamily: 'azeret-mono',
-                      }}
-                      formatter={(value: number) => `${value.toFixed(2)}%`}
-                    />
-                    <Bar dataKey="roe" fill="#64FFDA" radius={[8, 8, 0, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
-              ) : (
-                <div className="h-[300px] flex items-center justify-center text-foreground/60 font-paragraph">
-                  No performance data available
-                </div>
-              )}
-            </Card>
-          </motion.div>
-
-          {/* Holdings List */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.5 }}
-            className="mt-8"
-          >
-            <Card className="p-8 bg-white/5 border-white/10 backdrop-blur-lg">
-              <h2 className="text-2xl font-heading font-bold text-foreground mb-6 flex items-center gap-3">
-                <Wallet className="h-6 w-6 text-data-highlight" />
-                Current Holdings
-              </h2>
-
               <div className="space-y-4">
-                {stocks.map((stock, index) => (
-                  <motion.div
+                {topPerformers.map((stock, index) => (
+                  <div
                     key={stock._id}
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: index * 0.05 }}
-                    className="p-6 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition-all"
+                    className="flex items-center justify-between p-4 bg-white/5 rounded-lg hover:bg-white/10 transition-colors"
                   >
-                    <div className="flex items-center justify-between">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-3 mb-2">
-                          <h3 className="text-xl font-heading font-bold text-foreground">
-                            {stock.stockName}
-                          </h3>
-                          <Badge variant="outline" className="border-primary/30 text-primary">
-                            {stock.tickerSymbol}
-                          </Badge>
-                          <Badge variant="outline" className="border-secondary/30 text-secondary">
-                            {stock.industry}
-                          </Badge>
-                        </div>
-                        <div className="flex items-center gap-6 text-sm font-paragraph text-foreground/70">
-                          <span>Qty: 100</span>
-                          <span>Avg: ₹{stock.currentPrice ? (stock.currentPrice * 0.9).toFixed(2) : 'N/A'}</span>
-                          <span>Current: ₹{stock.currentPrice?.toFixed(2) || 'N/A'}</span>
-                        </div>
+                    <div className="flex items-center gap-4">
+                      <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center text-primary font-bold">
+                        {index + 1}
                       </div>
-                      <div className="text-right">
-                        <div className="text-2xl font-heading font-bold text-primary mb-1">
-                          {formatCurrency((stock.currentPrice || 0) * 100)}
+                      <div>
+                        <div className="font-heading font-bold text-foreground">
+                          {stock.stockName}
                         </div>
-                        <div className="flex items-center gap-2 text-sm font-paragraph text-primary">
-                          <TrendingUp className="h-4 w-4" />
-                          <span>+{((stock.currentPrice || 0) * 10).toFixed(0)} (+10%)</span>
+                        <div className="text-sm font-mono text-foreground/60">
+                          {stock.tickerSymbol}
                         </div>
                       </div>
                     </div>
-                  </motion.div>
+                    <div className="flex items-center gap-4">
+                      <div className="text-right">
+                        <div className="font-paragraph text-foreground">
+                          ₹{stock.currentPrice?.toFixed(2)}
+                        </div>
+                        <div className="text-sm text-foreground/60">{stock.industry}</div>
+                      </div>
+                      <Badge className="bg-green-500/20 text-green-500 border-green-500/30">
+                        ROE: {stock.roe?.toFixed(2)}%
+                      </Badge>
+                    </div>
+                  </div>
                 ))}
-
-                {stocks.length === 0 && (
-                  <div className="py-16 text-center">
-                    <p className="text-lg font-paragraph text-foreground/60">
-                      No holdings found. Add stocks to your portfolio to see them here.
-                    </p>
+                {topPerformers.length === 0 && (
+                  <div className="text-center py-8 text-foreground/50">
+                    No performance data available
                   </div>
                 )}
               </div>
@@ -382,12 +268,6 @@ export default function PortfolioPage() {
       </main>
 
       <Footer />
-
-      {/* Subscription Modal */}
-      <SubscriptionModal 
-        isOpen={isSubscriptionModalOpen} 
-        onClose={() => setIsSubscriptionModalOpen(false)} 
-      />
     </div>
   );
 }
