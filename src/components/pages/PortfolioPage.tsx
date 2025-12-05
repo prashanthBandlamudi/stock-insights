@@ -1,15 +1,20 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Wallet, TrendingUp, TrendingDown, PieChart, BarChart3, Activity } from 'lucide-react';
+import { Wallet, TrendingUp, TrendingDown, PieChart, BarChart3, Activity, Lock, Zap } from 'lucide-react';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { BaseCrudService } from '@/integrations';
 import { FundamentalScreeningResults } from '@/entities';
+import { useSubscriptionStore } from '@/store/subscriptionStore';
+import SubscriptionModal from '@/components/SubscriptionModal';
 import { PieChart as RechartsPie, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Legend, LineChart, Line, CartesianGrid } from 'recharts';
 
 export default function PortfolioPage() {
+  const { isSubscribed } = useSubscriptionStore();
+  const [isSubscriptionModalOpen, setIsSubscriptionModalOpen] = useState(false);
   const [stocks, setStocks] = useState<FundamentalScreeningResults[]>([]);
   const [totalValue, setTotalValue] = useState(0);
   const [totalGain, setTotalGain] = useState(0);
@@ -21,7 +26,9 @@ export default function PortfolioPage() {
 
   const loadPortfolioData = async () => {
     const { items } = await BaseCrudService.getAll<FundamentalScreeningResults>('fundamentalscreeningresults');
-    setStocks(items);
+    // If not subscribed, limit to 5 stocks
+    const displayStocks = isSubscribed ? items : items.slice(0, 5);
+    setStocks(displayStocks);
 
     const total = items.reduce((sum, stock) => sum + (stock.currentPrice || 0) * 100, 0);
     setTotalValue(total);
@@ -79,6 +86,30 @@ export default function PortfolioPage() {
               Track your holdings, performance, and sector allocation
             </p>
           </motion.div>
+
+          {/* Subscription Notice */}
+          {!isSubscribed && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="mb-8 p-4 rounded-lg bg-secondary/10 border border-secondary/30 flex items-center justify-between"
+            >
+              <div className="flex items-center gap-3">
+                <Lock className="h-5 w-5 text-secondary" />
+                <div>
+                  <p className="font-paragraph text-foreground font-semibold">Limited Portfolio View</p>
+                  <p className="text-sm font-paragraph text-foreground/70">Upgrade to unlock full portfolio tracking and advanced analytics</p>
+                </div>
+              </div>
+              <Button
+                onClick={() => setIsSubscriptionModalOpen(true)}
+                className="bg-secondary text-secondary-foreground hover:bg-secondary/90 font-paragraph"
+              >
+                <Zap className="mr-2 h-4 w-4" />
+                Upgrade
+              </Button>
+            </motion.div>
+          )}
 
           {/* Portfolio Stats */}
           <motion.div
@@ -351,6 +382,12 @@ export default function PortfolioPage() {
       </main>
 
       <Footer />
+
+      {/* Subscription Modal */}
+      <SubscriptionModal 
+        isOpen={isSubscriptionModalOpen} 
+        onClose={() => setIsSubscriptionModalOpen(false)} 
+      />
     </div>
   );
 }

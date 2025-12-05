@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Upload, Search, TrendingUp, TrendingDown, ArrowUpDown, FileText, X } from 'lucide-react';
+import { Upload, Search, TrendingUp, TrendingDown, ArrowUpDown, FileText, X, Lock, Zap } from 'lucide-react';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
 import { Button } from '@/components/ui/button';
@@ -11,8 +11,12 @@ import { BaseCrudService } from '@/integrations';
 import { FundamentalScreeningResults } from '@/entities';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
+import { useSubscriptionStore } from '@/store/subscriptionStore';
+import SubscriptionModal from '@/components/SubscriptionModal';
 
 export default function FundamentalsPage() {
+  const { isSubscribed } = useSubscriptionStore();
+  const [isSubscriptionModalOpen, setIsSubscriptionModalOpen] = useState(false);
   const [stocks, setStocks] = useState<FundamentalScreeningResults[]>([]);
   const [filteredStocks, setFilteredStocks] = useState<FundamentalScreeningResults[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -42,7 +46,9 @@ export default function FundamentalsPage() {
 
   const loadStocks = async () => {
     const { items } = await BaseCrudService.getAll<FundamentalScreeningResults>('fundamentalscreeningresults');
-    setStocks(items);
+    // If not subscribed, limit to 5 stocks
+    const displayStocks = isSubscribed ? items : items.slice(0, 5);
+    setStocks(displayStocks);
   };
 
   const filterAndSortStocks = () => {
@@ -176,7 +182,13 @@ export default function FundamentalsPage() {
                 Add Stock
               </Button>
               <Button
-                onClick={() => setIsImportDialogOpen(true)}
+                onClick={() => {
+                  if (!isSubscribed) {
+                    setIsSubscriptionModalOpen(true);
+                  } else {
+                    setIsImportDialogOpen(true);
+                  }
+                }}
                 variant="outline"
                 className="border-primary text-primary hover:bg-primary/10 font-paragraph"
               >
@@ -185,6 +197,30 @@ export default function FundamentalsPage() {
               </Button>
             </div>
           </motion.div>
+
+          {/* Subscription Notice */}
+          {!isSubscribed && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="mb-8 p-4 rounded-lg bg-secondary/10 border border-secondary/30 flex items-center justify-between"
+            >
+              <div className="flex items-center gap-3">
+                <Lock className="h-5 w-5 text-secondary" />
+                <div>
+                  <p className="font-paragraph text-foreground font-semibold">Limited to 5 stocks</p>
+                  <p className="text-sm font-paragraph text-foreground/70">Upgrade to view all {stocks.length > 5 ? stocks.length : 'unlimited'} stocks</p>
+                </div>
+              </div>
+              <Button
+                onClick={() => setIsSubscriptionModalOpen(true)}
+                className="bg-secondary text-secondary-foreground hover:bg-secondary/90 font-paragraph"
+              >
+                <Zap className="mr-2 h-4 w-4" />
+                Upgrade
+              </Button>
+            </motion.div>
+          )}
 
           {/* Stats Cards */}
           <motion.div
@@ -529,6 +565,12 @@ export default function FundamentalsPage() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Subscription Modal */}
+      <SubscriptionModal 
+        isOpen={isSubscriptionModalOpen} 
+        onClose={() => setIsSubscriptionModalOpen(false)} 
+      />
 
       <Footer />
     </div>
