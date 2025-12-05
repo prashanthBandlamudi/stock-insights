@@ -3,6 +3,7 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import mongoose from 'mongoose';
 import stockRoutes from './routes/stocks.js';
+import screenerRoutes from './routes/screener.js';
 
 dotenv.config();
 
@@ -16,6 +17,7 @@ app.use(express.urlencoded({ extended: true }));
 
 // Routes
 app.use('/api/stocks', stockRoutes);
+app.use('/api/screener', screenerRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {
