@@ -1,0 +1,799 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stock Insights - Screener</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .loading { animation: spin 1s linear infinite; }
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        
+        /* Performance optimized animations */
+        @keyframes fade-in {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .animate-fade-in {
+            animation: fade-in 0.5s ease-out forwards;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        .animate-pulse {
+            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+        
+        /* Optimized hover effects */
+        .hover-lift {
+            transition: transform 0.2s ease-out, box-shadow 0.2s ease-out;
+        }
+        
+        .hover-lift:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+        }
+        
+        /* Progressive loading bars */
+        .loading-bar {
+            transition: width 0.3s ease-out;
+        }
+        
+        /* Skeleton loading for performance */
+        .skeleton {
+            background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+            background-size: 200% 100%;
+            animation: loading 1.5s infinite;
+        }
+        
+        @keyframes loading {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <!-- Header -->
+    <header class="bg-white shadow-lg">
+        <div class="container mx-auto px-4 py-6">
+            <div class="flex justify-between items-center">
+                <h1 class="text-3xl font-bold text-blue-600">📊 Stock Insights</h1>
+                <div class="text-sm text-gray-600">
+                    <span id="api-status" class="px-3 py-1 rounded-full bg-gray-200">Checking...</span>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="container mx-auto px-4 py-8">
+        <!-- Hero Section -->
+        <div class="bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-lg p-8 mb-8">
+            <h2 class="text-4xl font-bold mb-4">Smart Stock Screener</h2>
+            <p class="text-xl mb-6">Filter stocks based on real financial data using Yahoo Finance API</p>
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div class="bg-white/20 rounded-lg p-4">
+                    <h3 class="font-bold">30+ Stocks</h3>
+                    <p class="text-sm">Major NSE stocks</p>
+                </div>
+                <div class="bg-white/20 rounded-lg p-4">
+                    <h3 class="font-bold">Real-time Data</h3>
+                    <p class="text-sm">Yahoo Finance API</p>
+                </div>
+                <div class="bg-white/20 rounded-lg p-4">
+                    <h3 class="font-bold">Smart Filters</h3>
+                    <p class="text-sm">Financial ratios</p>
+                </div>
+                <div class="bg-white/20 rounded-lg p-4">
+                    <h3 class="font-bold">Enterprise Grade</h3>
+                    <p class="text-sm">Scalable backend</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Filter Section -->
+        <div class="bg-white rounded-lg shadow-lg p-6 mb-8">
+            <h3 class="text-2xl font-bold mb-6">🔍 Screen Stocks</h3>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4 mb-6">
+                <button onclick="screenYourStocks()" 
+                        class="filter-btn bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white p-4 rounded-lg transition-colors shadow-lg hover-lift">
+                    <h4 class="font-bold">⚡ Your Stocks</h4>
+                    <p class="text-sm opacity-90">73 stocks • Optimized</p>
+                </button>
+                
+                <button onclick="testSampleStocks()" 
+                        class="filter-btn bg-yellow-500 hover:bg-yellow-600 text-white p-4 rounded-lg transition-colors">
+                    <h4 class="font-bold">🧪 Test</h4>
+                    <p class="text-sm opacity-90">Sample data</p>
+                </button>
+                
+                <button onclick="screenStocks('your_custom_criteria')" 
+                        class="filter-btn bg-red-500 hover:bg-red-600 text-white p-4 rounded-lg transition-colors">
+                    <h4 class="font-bold">Your Criteria</h4>
+                    <p class="text-sm opacity-90">ROE>14%, D/E<1, etc.</p>
+                </button>
+                
+                <button onclick="screenStocks('quality_stocks')" 
+                        class="filter-btn bg-blue-500 hover:bg-blue-600 text-white p-4 rounded-lg transition-colors">
+                    <h4 class="font-bold">Quality Stocks</h4>
+                    <p class="text-sm opacity-90">High ROE, Low Debt</p>
+                </button>
+                
+                <button onclick="screenStocks('large_cap_stable')" 
+                        class="filter-btn bg-green-500 hover:bg-green-600 text-white p-4 rounded-lg transition-colors">
+                    <h4 class="font-bold">Large Cap Stable</h4>
+                    <p class="text-sm opacity-90">₹50k+ Cr market cap</p>
+                </button>
+                
+                <button onclick="screenStocks('dividend_aristocrats')" 
+                        class="filter-btn bg-orange-500 hover:bg-orange-600 text-white p-4 rounded-lg transition-colors">
+                    <h4 class="font-bold">Dividend Aristocrats</h4>
+                    <p class="text-sm opacity-90">Consistent dividends</p>
+                </button>
+            </div>
+
+            <div id="loading" class="hidden text-center py-8">
+                <div class="loading inline-block w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full"></div>
+                <p class="mt-4 text-gray-600">Screening stocks...</p>
+            </div>
+        </div>
+
+        <!-- Results Section -->
+        <div id="results" class="hidden bg-white rounded-lg shadow-lg p-6">
+            <h3 class="text-2xl font-bold mb-6">📈 Screened Stocks</h3>
+            <div id="stocks-container" class="space-y-4"></div>
+        </div>
+
+        <!-- Error Section -->
+        <div id="error" class="hidden bg-red-50 border border-red-200 rounded-lg p-6">
+            <h3 class="text-xl font-bold text-red-600 mb-2">❌ Error</h3>
+            <p id="error-message" class="text-red-700"></p>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-gray-800 text-white py-8 mt-12">
+        <div class="container mx-auto px-4 text-center">
+            <p>&copy; 2024 Stock Insights. Enterprise-grade stock screening platform.</p>
+        </div>
+    </footer>
+
+    <script>
+        const API_BASE = 'http://localhost:5001/api';
+        
+        // Performance optimizations
+        let loadingCache = {};
+        let lastLoadTime = {};
+        
+        // Check API status on load
+        async function checkAPIStatus() {
+            try {
+                const response = await fetch(`${API_BASE}/health`);
+                const data = await response.json();
+                
+                const statusEl = document.getElementById('api-status');
+                if (data.status === 'OK') {
+                    statusEl.textContent = 'API Online';
+                    statusEl.className = 'px-3 py-1 rounded-full bg-green-200 text-green-800';
+                    
+                    // Preload cache for better performance
+                    preloadCache();
+                } else {
+                    throw new Error('API not responding');
+                }
+            } catch (error) {
+                const statusEl = document.getElementById('api-status');
+                statusEl.textContent = 'API Offline';
+                statusEl.className = 'px-3 py-1 rounded-full bg-red-200 text-red-800';
+            }
+        }
+        
+        // Preload cache in background
+        async function preloadCache() {
+            try {
+                console.log('🔥 Preloading cache...');
+                await fetch(`${API_BASE}/screener/preload-cache`, {
+                    method: 'POST'
+                });
+                console.log('✅ Cache preload initiated');
+            } catch (error) {
+                console.log('❌ Cache preload failed:', error);
+            }
+        }
+
+        // Optimized stock screening with progressive loading
+        async function screenYourStocks(page = 1, perPage = 10) {
+            const cacheKey = `stocks_${page}_${perPage}`;
+            const currentTime = Date.now();
+            
+            // Check cache first (5 minutes validity)
+            if (loadingCache[cacheKey] && 
+                lastLoadTime[cacheKey] && 
+                (currentTime - lastLoadTime[cacheKey]) < 300000) {
+                console.log(`💾 Using cached data for page ${page}`);
+                displayYourStocksPaginated(loadingCache[cacheKey]);
+                return;
+            }
+            
+            console.log(`� Optimized loading - Page ${page}, ${perPage} per page`);
+            
+            // Show progressive loading
+            showProgressiveLoading(page, perPage);
+            hideError();
+            
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 30000); // Reduced to 30s
+            
+            try {
+                const startTime = Date.now();
+                const url = `${API_BASE}/screener/your-stocks?page=${page}&per_page=${perPage}`;
+                console.log(`📡 Optimized request: ${url}`);
+                
+                const response = await fetch(url, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    signal: controller.signal
+                });
+                
+                clearTimeout(timeoutId);
+                
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(`HTTP ${response.status}: ${errorText}`);
+                }
+                
+                const data = await response.json();
+                const loadTime = Date.now() - startTime;
+                
+                console.log(`⚡ Loaded in ${loadTime}ms:`, data);
+                console.log(`� Performance:`, data.data.performance);
+                
+                if (data.status === 'success' && data.data.stocks?.length > 0) {
+                    // Cache the result
+                    loadingCache[cacheKey] = data.data;
+                    lastLoadTime[cacheKey] = currentTime;
+                    
+                    displayYourStocksPaginatedOptimized(data.data, loadTime);
+                } else {
+                    throw new Error('No stocks found in response');
+                }
+            } catch (error) {
+                clearTimeout(timeoutId);
+                console.error(`� Error:`, error);
+                
+                if (error.name === 'AbortError') {
+                    showError('Request timed out. Please try again.');
+                } else if (error.message.includes('Failed to fetch')) {
+                    showError('Cannot connect to server. Check if backend is running.');
+                } else {
+                    showError(`Error: ${error.message}`);
+                }
+            } finally {
+                hideLoading();
+            }
+        }
+
+        // Progressive loading indicator
+        function showProgressiveLoading(page, perPage) {
+            const loadingEl = document.getElementById('loading');
+            loadingEl.classList.remove('hidden');
+            loadingEl.innerHTML = `
+                <div class="text-center py-8">
+                    <div class="loading inline-block w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full"></div>
+                    <p class="mt-4 text-gray-600">⚡ Loading page ${page} (${perPage} stocks)...</p>
+                    <p class="text-sm text-gray-500">Using cached data when available</p>
+                    <div class="mt-2 bg-gray-200 rounded-full h-2 w-64 mx-auto">
+                        <div class="bg-blue-500 h-2 rounded-full loading-bar" style="width: 0%"></div>
+                    </div>
+                </div>
+            `;
+            
+            // Animate progress bar
+            const progressBar = loadingEl.querySelector('.loading-bar');
+            let progress = 0;
+            const interval = setInterval(() => {
+                progress += 10;
+                if (progressBar) progressBar.style.width = `${progress}%`;
+                if (progress >= 90) clearInterval(interval);
+            }, 100);
+        }
+
+        // Optimized display with performance metrics
+        function displayYourStocksPaginatedOptimized(data, loadTime) {
+            console.log(`📈 Optimized display:`, data);
+            
+            const resultsEl = document.getElementById('results');
+            const containerEl = document.getElementById('stocks-container');
+            
+            resultsEl.classList.remove('hidden');
+            
+            // Update header with performance info
+            const headerEl = resultsEl.querySelector('h3');
+            const pagination = data.pagination;
+            const performance = data.performance || {};
+            
+            headerEl.innerHTML = `
+                📊 ${data.title} (${pagination.showing_from}-${pagination.showing_to} of ${pagination.total_stocks} stocks)
+                <span class="text-sm text-green-600 ml-2">⚡ ${loadTime}ms</span>
+                <span class="text-xs text-gray-500 ml-2">
+                    ${performance.cached_data ? '💾 Cached' : '🌐 Live'} • 
+                    ${performance.parallel_processing ? '⚡ Parallel' : '📈 Sequential'}
+                </span>
+            `;
+            
+            // Clear and populate with optimized rendering
+            containerEl.innerHTML = '';
+            
+            // Create optimized pagination controls
+            const paginationHtml = createOptimizedPaginationControls(pagination);
+            containerEl.innerHTML = paginationHtml;
+            
+            // Use document fragment for faster DOM manipulation
+            const fragment = document.createDocumentFragment();
+            
+            data.stocks.forEach((stock, index) => {
+                const stockCard = createEnhancedStockCardOptimized(stock, index);
+                fragment.appendChild(stockCard);
+            });
+            
+            containerEl.appendChild(fragment);
+            
+            // Add bottom pagination
+            const bottomPaginationDiv = document.createElement('div');
+            bottomPaginationDiv.innerHTML = paginationHtml;
+            containerEl.appendChild(bottomPaginationDiv);
+            
+            // Add performance summary
+            addPerformanceSummary(containerEl, data);
+            
+            console.log(`✅ Optimized display complete`);
+        }
+
+        // Create optimized pagination controls
+        function createOptimizedPaginationControls(pagination) {
+            return `
+                <div class="flex justify-between items-center mb-6 p-4 bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg border">
+                    <div class="flex gap-2">
+                        <button onclick="screenYourStocks(1, ${pagination.per_page})" 
+                                ${pagination.current_page === 1 ? 'disabled' : ''}
+                                class="px-4 py-2 bg-blue-500 text-white rounded-lg disabled:bg-gray-300 disabled:cursor-not-allowed hover:bg-blue-600 transition-colors">
+                            ⏮ First
+                        </button>
+                        <button onclick="screenYourStocks(${pagination.prev_page || 1}, ${pagination.per_page})" 
+                                ${!pagination.has_prev ? 'disabled' : ''}
+                                class="px-4 py-2 bg-blue-500 text-white rounded-lg disabled:bg-gray-300 disabled:cursor-not-allowed hover:bg-blue-600 transition-colors">
+                            ← Prev
+                        </button>
+                    </div>
+                    
+                    <div class="text-center">
+                        <div class="text-lg font-bold text-gray-700">
+                            Page ${pagination.current_page} of ${pagination.total_pages}
+                        </div>
+                        <div class="text-sm text-gray-500">
+                            ${pagination.total_stocks} total stocks • Showing ${pagination.showing_from}-${pagination.showing_to}
+                        </div>
+                    </div>
+                    
+                    <div class="flex gap-2">
+                        <button onclick="screenYourStocks(${pagination.next_page || pagination.total_pages}, ${pagination.per_page})" 
+                                ${!pagination.has_next ? 'disabled' : ''}
+                                class="px-4 py-2 bg-blue-500 text-white rounded-lg disabled:bg-gray-300 disabled:cursor-not-allowed hover:bg-blue-600 transition-colors">
+                            Next →
+                        </button>
+                        <button onclick="screenYourStocks(${pagination.total_pages}, ${pagination.per_page})" 
+                                ${pagination.current_page === pagination.total_pages ? 'disabled' : ''}
+                                class="px-4 py-2 bg-blue-500 text-white rounded-lg disabled:bg-gray-300 disabled:cursor-not-allowed hover:bg-blue-600 transition-colors">
+                            Last ⏭
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Optimized stock card creation
+        function createEnhancedStockCardOptimized(stock, index) {
+            const card = document.createElement('div');
+            card.className = 'border border-gray-200 rounded-lg p-6 hover:shadow-lg transition-all duration-200 bg-gradient-to-r from-blue-50 to-purple-50 animate-fade-in';
+            card.style.animationDelay = `${index * 50}ms`;
+            
+            const changeColor = stock.yahoo_change >= 0 ? 'text-green-600' : 'text-red-600';
+            const changeIcon = stock.yahoo_change >= 0 ? '📈' : '📉';
+            const priceDiffColor = stock.price_diff_percent >= 0 ? 'text-green-600' : 'text-red-600';
+            
+            card.innerHTML = `
+                <div class="flex justify-between items-start mb-4">
+                    <div>
+                        <h4 class="text-xl font-bold text-gray-800 hover:text-blue-600 cursor-pointer" 
+                            onclick="window.open('${stock.url}', '_blank')">${stock.name}</h4>
+                        <p class="text-gray-600">${stock.ticker} • ${stock.industry}</p>
+                        <p class="text-sm text-gray-500">${stock.yahoo_sector}</p>
+                    </div>
+                    <div class="text-right">
+                        <p class="text-2xl font-bold">₹${stock.yahoo_current_price.toFixed(2)}</p>
+                        <p class="${changeColor} text-sm">${changeIcon} ${stock.yahoo_change_percent.toFixed(2)}%</p>
+                        <p class="text-xs text-gray-500">vs Screener: ₹${stock.screener_price.toFixed(2)}</p>
+                        <p class="${priceDiffColor} text-xs font-semibold">${stock.price_diff_percent > 0 ? '+' : ''}${stock.price_diff_percent.toFixed(2)}%</p>
+                    </div>
+                </div>
+                
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm mb-4">
+                    <div class="bg-white p-3 rounded-lg shadow-sm">
+                        <p class="text-gray-500">Market Cap</p>
+                        <p class="font-semibold">₹${stock.yahoo_market_cap.toLocaleString()} Cr</p>
+                    </div>
+                    <div class="bg-white p-3 rounded-lg shadow-sm">
+                        <p class="text-gray-500">P/E Ratio</p>
+                        <p class="font-semibold">${stock.yahoo_pe_ratio.toFixed(2)}</p>
+                        <p class="text-xs text-gray-400">Screener: ${stock.screener_pe.toFixed(2)}</p>
+                    </div>
+                    <div class="bg-white p-3 rounded-lg shadow-sm">
+                        <p class="text-gray-500">ROE</p>
+                        <p class="font-semibold">${stock.yahoo_roe.toFixed(2)}%</p>
+                        <p class="text-xs text-gray-400">Screener: ${stock.screener_roe.toFixed(2)}%</p>
+                    </div>
+                    <div class="bg-white p-3 rounded-lg shadow-sm">
+                        <p class="text-gray-500">Debt/Equity</p>
+                        <p class="font-semibold">${stock.yahoo_debt_equity.toFixed(2)}</p>
+                        <p class="text-xs text-gray-400">Screener: ${stock.screener_debt_equity.toFixed(2)}</p>
+                    </div>
+                </div>
+                
+                <div class="flex gap-2 flex-wrap">
+                    <span class="px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs">💾 Cached Data</span>
+                    <span class="px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs">⚡ Real-time</span>
+                    <span class="px-2 py-1 bg-purple-100 text-purple-800 rounded-full text-xs">${stock.industry_group}</span>
+                </div>
+            `;
+            
+            return card;
+        }
+
+        // Add performance summary
+        function addPerformanceSummary(container, data) {
+            const performance = data.performance || {};
+            const summaryDiv = document.createElement('div');
+            summaryDiv.className = 'mt-6 p-4 bg-gray-50 rounded-lg border-l-4 border-blue-500';
+            summaryDiv.innerHTML = `
+                <h4 class="font-bold text-gray-700 mb-2">⚡ Performance Summary</h4>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                    <div>
+                        <p class="text-gray-500">Processing Time</p>
+                        <p class="font-semibold">${performance.processing_time || 'N/A'}</p>
+                    </div>
+                    <div>
+                        <p class="text-gray-500">Data Sources</p>
+                        <p class="font-semibold">💾 Cached + 🌐 Live</p>
+                    </div>
+                    <div>
+                        <p class="text-gray-500">Processing</p>
+                        <p class="font-semibold">⚡ Parallel</p>
+                    </div>
+                    <div>
+                        <p class="text-gray-500">Cache Status</p>
+                        <p class="font-semibold">✅ Active</p>
+                    </div>
+                </div>
+            `;
+            container.appendChild(summaryDiv);
+        }
+
+        // Test function with sample data
+        async function testSampleStocks() {
+            console.log(`🧪 Testing with sample stock data`);
+            showLoading();
+            hideError();
+            
+            try {
+                const response = await fetch(`${API_BASE}/test/sample-stocks`);
+                const data = await response.json();
+                
+                console.log(`📊 Sample data response:`, data);
+                
+                if (data.status === 'success') {
+                    displayYourStocks(data.data);
+                } else {
+                    throw new Error('Failed to get sample data');
+                }
+            } catch (error) {
+                console.error(`❌ Test error:`, error);
+                showError(`Test Error: ${error.message}`);
+            } finally {
+                hideLoading();
+            }
+        }
+
+        // Display your screener.in stocks
+        function displayYourStocks(data) {
+            console.log(`📈 Displaying your stocks:`, data);
+            
+            const resultsEl = document.getElementById('results');
+            const containerEl = document.getElementById('stocks-container');
+            
+            resultsEl.classList.remove('hidden');
+            
+            // Update header
+            const headerEl = resultsEl.querySelector('h3');
+            headerEl.textContent = `📊 ${data.title} (${data.total} stocks)`;
+            console.log(`📊 Updated header: ${headerEl.textContent}`);
+            
+            // Clear previous results
+            containerEl.innerHTML = '';
+            
+            if (data.stocks.length === 0) {
+                console.log(`⚠️ No stocks found`);
+                containerEl.innerHTML = '<p class="text-gray-500 text-center py-8">No stocks data available.</p>';
+                return;
+            }
+            
+            console.log(`🎯 Creating ${data.stocks.length} enhanced stock cards`);
+            
+            // Create enhanced stock cards with comparison
+            data.stocks.forEach((stock, index) => {
+                console.log(`📋 Creating enhanced card ${index + 1} for ${stock.name}`);
+                const stockCard = createEnhancedStockCard(stock);
+                containerEl.appendChild(stockCard);
+            });
+            
+            console.log(`✅ Successfully displayed ${data.stocks.length} stock cards with real-time data`);
+        }
+
+        // Create enhanced stock card with real-time data comparison
+        function createEnhancedStockCard(stock) {
+            const card = document.createElement('div');
+            card.className = 'border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow bg-gradient-to-r from-blue-50 to-purple-50';
+            
+            const changeColor = stock.yahoo_change >= 0 ? 'text-green-600' : 'text-red-600';
+            const changeIcon = stock.yahoo_change >= 0 ? '↗' : '↘';
+            const priceDiffColor = stock.price_diff_percent >= 0 ? 'text-green-600' : 'text-red-600';
+            
+            card.innerHTML = `
+                <div class="flex justify-between items-start mb-4">
+                    <div>
+                        <h4 class="text-xl font-bold text-gray-800">${stock.name}</h4>
+                        <p class="text-gray-600">${stock.ticker} • ${stock.industry}</p>
+                        <p class="text-sm text-gray-500">${stock.yahoo_sector}</p>
+                    </div>
+                    <div class="text-right">
+                        <p class="text-2xl font-bold">₹${stock.yahoo_current_price.toFixed(2)}</p>
+                        <p class="${changeColor} text-sm">${changeIcon} ${stock.yahoo_change_percent.toFixed(2)}%</p>
+                        <p class="text-xs text-gray-500">vs Screener: ₹${stock.screener_price.toFixed(2)}</p>
+                        <p class="${priceDiffColor} text-xs">${stock.price_diff_percent > 0 ? '+' : ''}${stock.price_diff_percent.toFixed(2)}%</p>
+                    </div>
+                </div>
+                
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm mb-4">
+                    <div class="bg-white p-3 rounded">
+                        <p class="text-gray-500">Market Cap</p>
+                        <p class="font-semibold">₹${stock.yahoo_market_cap.toLocaleString()} Cr</p>
+                    </div>
+                    <div class="bg-white p-3 rounded">
+                        <p class="text-gray-500">P/E Ratio</p>
+                        <p class="font-semibold">${stock.yahoo_pe_ratio.toFixed(2)}</p>
+                        <p class="text-xs text-gray-400">Screener: ${stock.screener_pe.toFixed(2)}</p>
+                    </div>
+                    <div class="bg-white p-3 rounded">
+                        <p class="text-gray-500">ROE</p>
+                        <p class="font-semibold">${stock.yahoo_roe.toFixed(2)}%</p>
+                        <p class="text-xs text-gray-400">Screener: ${stock.screener_roe.toFixed(2)}%</p>
+                    </div>
+                    <div class="bg-white p-3 rounded">
+                        <p class="text-gray-500">Debt/Equity</p>
+                        <p class="font-semibold">${stock.yahoo_debt_equity.toFixed(2)}</p>
+                        <p class="text-xs text-gray-400">Screener: ${stock.screener_debt_equity.toFixed(2)}</p>
+                    </div>
+                </div>
+                
+                <div class="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm mb-4">
+                    <div class="bg-white p-2 rounded">
+                        <p class="text-gray-500">52W Range</p>
+                        <p class="font-semibold text-xs">₹${stock.yahoo_52w_low.toFixed(2)} - ₹${stock.yahoo_52w_high.toFixed(2)}</p>
+                    </div>
+                    <div class="bg-white p-2 rounded">
+                        <p class="text-gray-500">Volume</p>
+                        <p class="font-semibold">${(stock.yahoo_volume / 1000).toFixed(0)}K</p>
+                    </div>
+                    <div class="bg-white p-2 rounded">
+                        <p class="text-gray-500">Revenue Growth</p>
+                        <p class="font-semibold">${stock.yahoo_revenue_growth.toFixed(2)}%</p>
+                    </div>
+                </div>
+                
+                <div class="flex gap-2 flex-wrap">
+                    <span class="px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs">Yahoo Finance Live</span>
+                    <span class="px-2 py-1 bg-purple-100 text-purple-800 rounded text-xs">Screener.in</span>
+                    <span class="px-2 py-1 bg-gray-100 text-gray-800 rounded text-xs">${stock.industry_group}</span>
+                </div>
+            `;
+            
+            return card;
+        }
+
+        // Screen stocks with predefined filter
+        async function screenStocks(filterName) {
+            console.log(`🔍 Screening stocks with filter: ${filterName}`);
+            showLoading();
+            hideError();
+            
+            // Create AbortController for timeout
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+            
+            try {
+                console.log(`📡 Calling API: ${API_BASE}/screener/screen/${filterName}`);
+                
+                const response = await fetch(`${API_BASE}/screener/screen/${filterName}`, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    signal: controller.signal
+                });
+                
+                clearTimeout(timeoutId);
+                console.log(`📊 API Response status: ${response.status}`);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                console.log(`📋 API Response data:`, data);
+                
+                if (data.status === 'success') {
+                    console.log(`✅ Success! Found ${data.data.total} stocks`);
+                    displayResults(data.data);
+                } else {
+                    console.error(`❌ API Error:`, data.message);
+                    throw new Error(data.message || 'Screening failed');
+                }
+            } catch (error) {
+                clearTimeout(timeoutId);
+                
+                if (error.name === 'AbortError') {
+                    console.error('❌ Request timed out after 30 seconds');
+                    showError('Request timed out. Please check if the backend server is running.');
+                } else {
+                    console.error(`❌ Request Error:`, error);
+                    showError(`Error: ${error.message}`);
+                }
+            } finally {
+                hideLoading();
+            }
+        }
+
+        // Display results
+        function displayResults(data) {
+            console.log(`📈 Displaying results:`, data);
+            
+            const resultsEl = document.getElementById('results');
+            const containerEl = document.getElementById('stocks-container');
+            
+            resultsEl.classList.remove('hidden');
+            
+            // Update header
+            const headerEl = resultsEl.querySelector('h3');
+            headerEl.textContent = `📈 ${data.filter_name} (${data.total} stocks found)`;
+            console.log(`📊 Updated header: ${headerEl.textContent}`);
+            
+            // Clear previous results
+            containerEl.innerHTML = '';
+            
+            if (data.stocks.length === 0) {
+                console.log(`⚠️ No stocks found`);
+                containerEl.innerHTML = '<p class="text-gray-500 text-center py-8">No stocks match the criteria.</p>';
+                return;
+            }
+            
+            console.log(`🎯 Creating ${data.stocks.length} stock cards`);
+            
+            // Create stock cards
+            data.stocks.forEach((stock, index) => {
+                console.log(`📋 Creating card ${index + 1} for ${stock.name}`);
+                const stockCard = createStockCard(stock);
+                containerEl.appendChild(stockCard);
+            });
+            
+            console.log(`✅ Successfully displayed ${data.stocks.length} stock cards`);
+        }
+
+        // Create stock card
+        function createStockCard(stock) {
+            const card = document.createElement('div');
+            card.className = 'border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow';
+            
+            const changeColor = stock.change >= 0 ? 'text-green-600' : 'text-red-600';
+            const changeIcon = stock.change >= 0 ? '↗' : '↘';
+            
+            card.innerHTML = `
+                <div class="flex justify-between items-start mb-4">
+                    <div>
+                        <h4 class="text-xl font-bold text-gray-800">${stock.name}</h4>
+                        <p class="text-gray-600">${stock.ticker} • ${stock.sector}</p>
+                    </div>
+                    <div class="text-right">
+                        <p class="text-2xl font-bold">₹${stock.currentPrice.toFixed(2)}</p>
+                        <p class="${changeColor} text-sm">${changeIcon} ${stock.changePercent.toFixed(2)}%</p>
+                    </div>
+                </div>
+                
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                    <div>
+                        <p class="text-gray-500">Market Cap</p>
+                        <p class="font-semibold">₹${stock.marketCap.toLocaleString()} Cr</p>
+                    </div>
+                    <div>
+                        <p class="text-gray-500">P/E Ratio</p>
+                        <p class="font-semibold">${stock.peRatio.toFixed(2)}</p>
+                    </div>
+                    <div>
+                        <p class="text-gray-500">ROE</p>
+                        <p class="font-semibold">${stock.roe.toFixed(2)}%</p>
+                    </div>
+                    <div>
+                        <p class="text-gray-500">Debt/Equity</p>
+                        <p class="font-semibold">${stock.debtToEquity.toFixed(2)}</p>
+                    </div>
+                </div>
+                
+                <div class="mt-4 flex gap-2">
+                    <span class="px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs">${stock.exchange}</span>
+                    <span class="px-2 py-1 bg-gray-100 text-gray-800 rounded text-xs">${stock.industry}</span>
+                </div>
+            `;
+            
+            return card;
+        }
+
+        // Utility functions
+        function showLoading() {
+            document.getElementById('loading').classList.remove('hidden');
+            document.getElementById('results').classList.add('hidden');
+            
+            // Disable filter buttons
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                btn.disabled = true;
+                btn.classList.add('opacity-50');
+            });
+        }
+
+        function hideLoading() {
+            document.getElementById('loading').classList.add('hidden');
+            
+            // Re-enable filter buttons
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                btn.disabled = false;
+                btn.classList.remove('opacity-50');
+            });
+        }
+
+        function showError(message) {
+            const errorEl = document.getElementById('error');
+            const messageEl = document.getElementById('error-message');
+            
+            messageEl.textContent = message;
+            errorEl.classList.remove('hidden');
+            document.getElementById('results').classList.add('hidden');
+        }
+
+        function hideError() {
+            document.getElementById('error').classList.add('hidden');
+        }
+
+        // Initialize
+        window.addEventListener('load', () => {
+            checkAPIStatus();
+        });
+    </script>
+</body>
+</html>

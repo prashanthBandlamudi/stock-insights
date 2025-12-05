@@ -11,13 +11,29 @@ import {
   Cpu, 
   Zap, 
   Layers, 
-  Search 
+  Search,
+  Lock,
+  Unlock,
+  Filter,
+  Download,
+  Eye,
+  RefreshCw,
+  LogIn,
+  AlertCircle,
+  CheckCircle,
+  Loader2 as Loader,
+  RotateCcw
 } from 'lucide-react';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Card } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+
 import { Image } from '@/components/ui/image';
 import { StockService } from '@/services/stockService';
+import { screenerService, ScreenerStock } from '@/services/screenerService';
 
 // --- Types ---
 type FeatureItem = {
@@ -83,6 +99,11 @@ const GlitchText = ({ text }: { text: string }) => {
 
 export default function HomePage() {
   const [stockCount, setStockCount] = useState(0);
+  const [isLoggedIn, setIsLoggedIn] = useState(true); // Always true for TradingView
+  const [isLoading, setIsLoading] = useState(false);
+  const [screenedStocks, setScreenedStocks] = useState<ScreenerStock[]>([]);
+  const [selectedFilter, setSelectedFilter] = useState<string>('quality-stocks');
+  const [connectionStatus, setConnectionStatus] = useState('checking');
   
   // Tickers List
   const tickers = [
@@ -152,8 +173,65 @@ export default function HomePage() {
         console.error('Failed to load stocks:', error);
       }
     };
+    
+    checkServiceStatus();
     loadStats();
   }, []);
+
+  // Handler functions for screener integration
+  const checkServiceStatus = async () => {
+    setConnectionStatus('checking');
+    try {
+      await screenerService.getAvailableFilters();
+      setConnectionStatus('connected');
+    } catch (error) {
+      setConnectionStatus('error');
+      console.error('Service connection failed:', error);
+    }
+  };
+
+  const handleFetchStocks = async () => {
+    setIsLoading(true);
+    try {
+      const stocks = await screenerService.fetchScreenedStocks(selectedFilter);
+      setScreenedStocks(stocks);
+    } catch (error) {
+      console.error('Failed to fetch stocks:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleSaveToDatabase = async () => {
+    setIsLoading(true);
+    try {
+      for (const stock of screenedStocks) {
+        await StockService.create({
+          stockName: stock.name,
+          tickerSymbol: stock.ticker,
+          currentPrice: stock.currentPrice,
+          marketCap: stock.marketCap,
+          peRatio: stock.peRatio,
+          roe: stock.roe,
+          debtToEquity: stock.debtToEquity,
+          industry: stock.sector,
+        });
+      }
+      // Refresh stock count
+      const stocks = await StockService.getAll();
+      setStockCount(stocks.length);
+    } catch (error) {
+      console.error('Failed to save stocks:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleLogout = () => {
+    screenerService.logout();
+    setIsLoggedIn(false);
+    setScreenedStocks([]);
+  };
 
   // --- Scroll & Motion Hooks ---
   const { scrollYProgress } = useScroll();
@@ -273,6 +351,197 @@ export default function HomePage() {
 
           {/* Hero Footer Decoration */}
           <div className="absolute bottom-0 left-0 w-full h-24 bg-gradient-to-t from-background to-transparent z-20" />
+        </section>
+
+        {/* --- SCREENER INTEGRATION SECTION --- */}
+        <section className="relative py-24 w-full">
+          <div className="max-w-[120rem] mx-auto px-6">
+            <AnimatedElement>
+              <div className="text-center mb-16">
+                <h2 className="text-4xl md:text-5xl font-heading font-bold mb-6">
+                  SCREENER.IN <span className="text-primary">INTEGRATION</span>
+                </h2>
+                <p className="text-lg text-gray-400 max-w-2xl mx-auto">
+                  Connect to Screener.in, apply filters, and fetch high-quality stocks directly into your workspace
+                </p>
+              </div>
+            </AnimatedElement>
+
+            {/* Screener Controls */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-12">
+              {/* Service Status Card */}
+              <AnimatedElement delay={100}>
+                <Card className="p-6 bg-gradient-to-br from-primary/10 to-primary/5 border-primary/30 backdrop-blur-lg">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-lg font-heading font-bold">Service Status</h3>
+                    {connectionStatus === 'connected' ? (
+                      <Badge className="bg-green-500/20 text-green-500 border-green-500/30">
+                        <CheckCircle className="w-3 h-3 mr-1" />
+                        Connected
+                      </Badge>
+                    ) : connectionStatus === 'checking' ? (
+                      <Badge className="bg-yellow-500/20 text-yellow-500 border-yellow-500/30">
+                        <Loader className="w-3 h-3 mr-1 animate-spin" />
+                        Checking
+                      </Badge>
+                    ) : (
+                      <Badge className="bg-red-500/20 text-red-500 border-red-500/30">
+                        <AlertCircle className="w-3 h-3 mr-1" />
+                        Disconnected
+                      </Badge>
+                    )}
+                  </div>
+                  <p className="text-sm text-foreground/70 mb-4">
+                    {connectionStatus === 'connected' 
+                      ? 'Successfully connected to TradingView Screener API' 
+                      : connectionStatus === 'checking' 
+                      ? 'Checking service connection...'
+                      : 'Service connection failed'
+                    }
+                  </p>
+                  <div className="flex gap-2">
+                    <Button 
+                      onClick={checkServiceStatus}
+                      variant="outline"
+                      className="border-primary/30 text-primary hover:bg-primary/10"
+                      disabled={connectionStatus === 'checking'}
+                    >
+                      <RotateCcw className="w-4 h-4 mr-2" />
+                      {connectionStatus === 'checking' ? 'Checking...' : 'Check Connection'}
+                    </Button>
+                  </div>
+                </Card>
+              </AnimatedElement>
+
+              {/* Filter Selection Card */}
+              <AnimatedElement delay={200}>
+                <Card className="p-6 bg-gradient-to-br from-secondary/10 to-secondary/5 border-secondary/30 backdrop-blur-lg">
+                  <h3 className="text-lg font-heading font-bold mb-4">Stock Filters</h3>
+                  <div className="space-y-3">
+                    {Object.entries(screenerService.getPredefinedFilters()).map(([key, filter]) => (
+                      <div key={key} className="flex items-center space-x-2">
+                        <input
+                          type="radio"
+                          id={key}
+                          name="filter"
+                          value={key}
+                          checked={selectedFilter === key}
+                          onChange={(e) => setSelectedFilter(e.target.value)}
+                          className="text-primary"
+                        />
+                        <label htmlFor={key} className="text-sm font-medium cursor-pointer capitalize">
+                          {key.replace('-', ' ')}
+                        </label>
+                      </div>
+                    ))}
+                  </div>
+                  <Button 
+                    onClick={handleFetchStocks}
+                    className="w-full mt-4 bg-secondary text-black hover:bg-secondary/90"
+                    disabled={!isLoggedIn || isLoading}
+                  >
+                    {isLoading ? (
+                      <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                    ) : (
+                      <Filter className="w-4 h-4 mr-2" />
+                    )}
+                    Fetch Stocks
+                  </Button>
+                </Card>
+              </AnimatedElement>
+
+              {/* Results Summary Card */}
+              <AnimatedElement delay={300}>
+                <Card className="p-6 bg-gradient-to-br from-data-highlight/10 to-data-highlight/5 border-data-highlight/30 backdrop-blur-lg">
+                  <h3 className="text-lg font-heading font-bold mb-4">Results</h3>
+                  <div className="space-y-4">
+                    <div className="text-3xl font-heading font-bold text-data-highlight">
+                      {screenedStocks.length}
+                    </div>
+                    <p className="text-sm text-foreground/70">Stocks found</p>
+                    {screenedStocks.length > 0 && (
+                      <Button 
+                        onClick={handleSaveToDatabase}
+                        className="w-full bg-data-highlight text-black hover:bg-data-highlight/90"
+                        disabled={isLoading}
+                      >
+                        <Download className="w-4 h-4 mr-2" />
+                        Save to Database
+                      </Button>
+                    )}
+                  </div>
+                </Card>
+              </AnimatedElement>
+            </div>
+
+            {/* Screened Stocks Results */}
+            {screenedStocks.length > 0 && (
+              <AnimatedElement delay={400}>
+                <Card className="p-6 bg-white/5 border-white/10 backdrop-blur-lg">
+                  <div className="flex items-center justify-between mb-6">
+                    <h3 className="text-xl font-heading font-bold">Screened Stocks</h3>
+                    <Badge className="bg-primary/20 text-primary border-primary/30">
+                      {screenedStocks.length} stocks
+                    </Badge>
+                  </div>
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead>
+                        <tr className="border-b border-white/10">
+                          <th className="text-left py-3 px-4 font-paragraph text-sm text-foreground/70">Stock</th>
+                          <th className="text-left py-3 px-4 font-paragraph text-sm text-foreground/70">Price</th>
+                          <th className="text-left py-3 px-4 font-paragraph text-sm text-foreground/70">Market Cap</th>
+                          <th className="text-left py-3 px-4 font-paragraph text-sm text-foreground/70">P/E</th>
+                          <th className="text-left py-3 px-4 font-paragraph text-sm text-foreground/70">ROE</th>
+                          <th className="text-left py-3 px-4 font-paragraph text-sm text-foreground/70">Sector</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {screenedStocks.slice(0, 10).map((stock, index) => (
+                          <tr key={index} className="border-b border-white/5 hover:bg-white/5 transition-colors">
+                            <td className="py-3 px-4">
+                              <div>
+                                <div className="font-paragraph text-foreground">{stock.name}</div>
+                                <div className="font-mono text-sm text-primary">{stock.ticker}</div>
+                              </div>
+                            </td>
+                            <td className="py-3 px-4 font-paragraph text-foreground">
+                              ₹{stock.currentPrice.toFixed(2)}
+                            </td>
+                            <td className="py-3 px-4 font-paragraph text-foreground">
+                              ₹{(stock.marketCap / 100).toFixed(0)}Cr
+                            </td>
+                            <td className="py-3 px-4 font-paragraph text-foreground">
+                              {stock.peRatio.toFixed(2)}
+                            </td>
+                            <td className="py-3 px-4">
+                              <Badge
+                                className={
+                                  stock.roe > 15
+                                    ? 'bg-green-500/20 text-green-500'
+                                    : 'bg-yellow-500/20 text-yellow-500'
+                                }
+                              >
+                                {stock.roe.toFixed(1)}%
+                              </Badge>
+                            </td>
+                            <td className="py-3 px-4 font-paragraph text-foreground/70">
+                              {stock.sector}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                    {screenedStocks.length > 10 && (
+                      <div className="text-center mt-4 text-foreground/60">
+                        Showing 10 of {screenedStocks.length} stocks
+                      </div>
+                    )}
+                  </div>
+                </Card>
+              </AnimatedElement>
+            )}
+          </div>
         </section>
 
         {/* --- SECTION 2: The Process --- */}
